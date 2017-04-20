@@ -8,13 +8,13 @@
 #include <string>
 
 
-void displayObjects(cv::UMat, std::vector<cv::Rect>, std::string);
+void displayObjects(cv::UMat&, std::vector<cv::Rect>&);
 void captureVideo();
 
 /** @function main */
 int main(int argc, char** argv)
 {
-	for (int i = 0; i < 1; i++) {
+	for (int i = 0; i < 10; i++) {
 		captureVideo();
 	}
 
@@ -22,7 +22,7 @@ int main(int argc, char** argv)
 }
 
 //Display the faces of a frame
-void displayObjects(cv::UMat frame, std::vector<cv::Rect> bodies, std::string windowName = "Window") {
+void displayObjects(cv::UMat& frame, std::vector<cv::Rect>& bodies) {
 	for (size_t i = 0; i < bodies.size(); i++) {
 		cv::Point p1(bodies[i].x, bodies[i].y);
 		cv::Point p2(bodies[i].x + bodies[i].width, bodies[i].y + bodies[i].height);
@@ -30,21 +30,33 @@ void displayObjects(cv::UMat frame, std::vector<cv::Rect> bodies, std::string wi
 		rectangle(frame, p1, p2, cv::Scalar(255, 255, 255), 4, 8, 0);
 		}
 
-	cv::namedWindow((windowName), cv::WINDOW_AUTOSIZE);
-	imshow((windowName), frame);
+	cv::namedWindow(("Window"), cv::WINDOW_AUTOSIZE);
+	imshow(("Window"), frame);
 
 }
 
+/*
+Realy good for two seconds occurrences.
+cv::VideoCapture capture("../../../video/2.mp4");
+cascade.load("../../data/haarcascades/haarcascade_mcs_upperbody.xml");
+cascade.detectMultiScale(frame, bodies, 1.1, 3, 0, cv::Size(48, 48));
 
+*/
 //Capture video from webcamera
 void captureVideo() {
 	//Video capture
-	cv::VideoCapture capture("../../../video/1.mp4");
+	//cv::VideoCapture capture("../../../video/2.mp4");
+	cv::VideoCapture capture("../../../video/2.mp4");
+
 	cv::UMat frame;
 
 	cv::CascadeClassifier cascade;
+	
+	cascade.load("../../data/haarcascades/haarcascade_mcs_upperbody.xml");
 	//cascade.load("../../data/haarcascades/haarcascade_frontalface_alt2.xml");
-	cascade.load("../../data/case.xml");
+	//cascade.load("../../data/lbpcascades/lbpcascade_frontalface.xml");
+
+	//cascade.load("../../data/case.xml");
 
 	//Vector of bodies.
 	std::vector<cv::Rect> bodies;
@@ -85,10 +97,15 @@ void captureVideo() {
 				//cv::equalizeHist(frame, frame);
 				
 				//Resize the frame, for lighter processing.
+				/*
+				cv::resize(frame, frame, cv::Size(640, 480));
+				/*/
 				cv::resize(frame, frame, cv::Size(1024, 576));
-
+				//*/
+				
+				
 				//Object detection
-				cascade.detectMultiScale(frame, bodies, 1.1, 3, 0, cv::Size(48, 48));
+				cascade.detectMultiScale(frame, bodies, 1.1, 3, 0, cv::Size(55, 50));
 				cv::putText(frame, "FPS: " + std::to_string(fps), cvPoint(30,30), CV_FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 0), 2);
 				cv::putText(frame, "Persons: " + std::to_string(lastNum), cvPoint(30, 55), CV_FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 0), 2);
 
@@ -105,7 +122,7 @@ void captureVideo() {
 				counter++;
 				if (counter == occurrences) {
 					counter = 0;
-					occurrences = fps;
+					occurrences = fps*2;
 					lastNum = bodies.size();
 					
 					std::cout << lastNum << std::endl;
