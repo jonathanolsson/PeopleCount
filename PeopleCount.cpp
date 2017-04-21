@@ -9,13 +9,42 @@
 
 
 void displayObjects(cv::UMat&, std::vector<cv::Rect>&);
-void captureVideo();
+void captureVideo(const std::string& filename = "");
+
+const cv::String keys =
+{
+	"{help h|      | print this message   }"
+	"{v|      | directory to video   }"
+	"{d| | display videostream}"
+};
+
+bool DISPLAY = false;
 
 /** @function main */
 int main(int argc, char** argv)
 {
-	for (int i = 0; i < 10; i++) {
+	cv::CommandLineParser parser(argc, argv, keys);
+	
+	if (parser.has("help")) {
+		parser.printMessage();
+		return 0;
+	}
+
+	if (parser.has("v")) {
+		cv::String filename = parser.get<std::string>("v");
+		captureVideo(filename);
+	}
+	else {
 		captureVideo();
+	}
+
+	if (parser.has("d")) {
+		DISPLAY = true;
+	}
+
+	if (!parser.check()) {
+		parser.printErrors();
+		return 0;
 	}
 
 	return 0;
@@ -43,10 +72,17 @@ cascade.detectMultiScale(frame, bodies, 1.1, 3, 0, cv::Size(48, 48));
 
 */
 //Capture video from webcamera
-void captureVideo() {
+void captureVideo(const std::string& filename) {
 	//Video capture
 	//cv::VideoCapture capture("../../../video/2.mp4");
-	cv::VideoCapture capture("../../../video/2.mp4");
+	cv::VideoCapture capture;
+
+	if (filename.empty()) {
+		capture.open(0);
+	}
+	else {
+		capture.open(filename);
+	}
 
 	cv::UMat frame;
 
@@ -97,7 +133,7 @@ void captureVideo() {
 				//cv::equalizeHist(frame, frame);
 				
 				//Resize the frame, for lighter processing.
-				/*
+				//*
 				cv::resize(frame, frame, cv::Size(640, 480));
 				/*/
 				cv::resize(frame, frame, cv::Size(1024, 576));
@@ -106,11 +142,15 @@ void captureVideo() {
 				
 				//Object detection
 				cascade.detectMultiScale(frame, bodies, 1.1, 3, 0, cv::Size(55, 50));
+				
 				cv::putText(frame, "FPS: " + std::to_string(fps), cvPoint(30,30), CV_FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 0), 2);
 				cv::putText(frame, "Persons: " + std::to_string(lastNum), cvPoint(30, 55), CV_FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 0), 2);
 
-				//Display objects
-				displayObjects(frame, bodies);
+				if (DISPLAY) {
+					//Display objects
+					displayObjects(frame, bodies);
+				}
+
 			}
 			else {
 				printf(" --(!) No captured frame -- Break! Or no more video...");

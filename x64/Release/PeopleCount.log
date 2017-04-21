@@ -1,9 +1,7 @@
-﻿  PeopleCount.cpp
-PeopleCount.cpp(126): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
-  Generating code
-  2 of 165 functions ( 1.2%) were compiled, the rest were copied from previous compilation.
+﻿  Generating code
+  5 of 180 functions ( 2.8%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
-    1 functions had inline decision re-evaluated but remain unchanged
+    18 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   PeopleCount.vcxproj -> C:\Users\jonathan\Documents\Visual Studio 2015\Projects\PeopleCount\x64\Release\PeopleCount.exe
   PeopleCount.vcxproj -> C:\Users\jonathan\Documents\Visual Studio 2015\Projects\PeopleCount\x64\Release\PeopleCount.pdb (Full PDB)
