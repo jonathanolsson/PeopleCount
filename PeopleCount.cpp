@@ -13,9 +13,9 @@ void captureVideo(const std::string& filename = "");
 
 const cv::String keys =
 {
-	"{help h|      | print this message   }"
-	"{v|      | directory to video   }"
-	"{d| | display videostream}"
+	"{help h		|		| print this message   }"
+	"{video v		|		| directory to video   }"
+	"{display d		|		| display videostream}"
 };
 
 bool DISPLAY = false;
@@ -143,10 +143,11 @@ void captureVideo(const std::string& filename) {
 				//Object detection
 				cascade.detectMultiScale(frame, bodies, 1.1, 3, 0, cv::Size(55, 50));
 				
-				cv::putText(frame, "FPS: " + std::to_string(fps), cvPoint(30,30), CV_FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 0), 2);
-				cv::putText(frame, "Persons: " + std::to_string(lastNum), cvPoint(30, 55), CV_FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 0), 2);
-
 				if (DISPLAY) {
+					//Put info on frame(Frames processed per second and the occupancy)
+					cv::putText(frame, "FPS: " + std::to_string(fps), cvPoint(30, 30), CV_FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 0), 2);
+					cv::putText(frame, "Persons: " + std::to_string(lastNum), cvPoint(30, 55), CV_FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 0), 2);
+
 					//Display objects
 					displayObjects(frame, bodies);
 				}
