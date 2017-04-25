@@ -13,9 +13,9 @@ void captureVideo(const std::string& filename = "");
 
 const cv::String keys =
 {
-	"{help h		|		| print this message   }"
-	"{video v		|		| directory to video   }"
-	"{display d		|		| display videostream}"
+	"{help h | | print this message}"
+	"{video v | | directory to video}"
+	"{display d | | display videostream}"
 };
 
 bool DISPLAY = false;
@@ -23,6 +23,7 @@ bool DISPLAY = false;
 /** @function main */
 int main(int argc, char** argv)
 {
+	//Command line user interface
 	cv::CommandLineParser parser(argc, argv, keys);
 	
 	if (parser.has("help")) {
@@ -30,15 +31,8 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	if (parser.has("v")) {
-		cv::String filename = parser.get<std::string>("v");
-		captureVideo(filename);
-	}
-	else {
-		captureVideo();
-	}
-
-	if (parser.has("d")) {
+	if (parser.has("display")) {
+		std::cout << "Displaying video \n";
 		DISPLAY = true;
 	}
 
@@ -47,11 +41,26 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
+	if (parser.has("v")) {
+
+		cv::String filename = parser.get<std::string>("v");
+		captureVideo(filename);
+	}
+	else {
+		captureVideo();
+	}
+
+
+
 	return 0;
 }
 
 //Display the faces of a frame
 void displayObjects(cv::UMat& frame, std::vector<cv::Rect>& bodies) {
+	cv::Point p1(0,0);
+	cv::Point p2(350, 350);
+
+	rectangle(frame, p1, p2, cv::Scalar(255, 255, 255), 4, 8, 0);
 	for (size_t i = 0; i < bodies.size(); i++) {
 		cv::Point p1(bodies[i].x, bodies[i].y);
 		cv::Point p2(bodies[i].x + bodies[i].width, bodies[i].y + bodies[i].height);
@@ -133,16 +142,17 @@ void captureVideo(const std::string& filename) {
 				//cv::equalizeHist(frame, frame);
 				
 				//Resize the frame, for lighter processing.
-				//*
+				/*
 				cv::resize(frame, frame, cv::Size(640, 480));
 				/*/
 				cv::resize(frame, frame, cv::Size(1024, 576));
 				//*/
-				
+				//cv::resize(frame, frame, cv::Size(1280, 720));
 				
 				//Object detection
-				cascade.detectMultiScale(frame, bodies, 1.1, 3, 0, cv::Size(55, 50));
-				
+				//cascade.detectMultiScale(frame, bodies, 1.1, 3, 0, cv::Size(55, 50));
+				cascade.detectMultiScale(frame, bodies, 1.1, 2, 0, cv::Size(80, 70), cv::Size(300, 300));
+
 				if (DISPLAY) {
 					//Put info on frame(Frames processed per second and the occupancy)
 					cv::putText(frame, "FPS: " + std::to_string(fps), cvPoint(30, 30), CV_FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 0), 2);
@@ -175,9 +185,10 @@ void captureVideo(const std::string& filename) {
 				break;
 			}
 		}
-	}
 
-	std::cout << "Closing the camera" << std::endl;
-	capture.release();
-	cv::destroyAllWindows();
+		std::cout << "Closing the camera" << std::endl;
+		capture.release();
+		cv::destroyAllWindows();
+	}
+	return;
 }
