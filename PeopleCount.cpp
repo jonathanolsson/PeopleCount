@@ -13,9 +13,11 @@
 void displayObjects(cv::UMat&, std::vector<cv::Rect>&, const cv::Scalar& colour = cv::Scalar(0,0,0));
 
 void findArguments(const std::string& filename);
+void testFPS(const std::string& filename);
 
 void captureVideo(const std::string& filename = "");
-void captureVideoTest(const std::string& filename, std::ofstream& outFile, int& minNeighbour, double& scale, cv::Size& minSize, const std::string& cascadeName);
+void captureVideoTestFPS(const std::string& filename, std::ofstream& outFile, int& minNeighbour, double& scale, cv::Size& minSize, const std::string& cascadeName);
+void captureVideoFindArguments(const std::string& filename, std::ofstream& outFile, int& minNeighbour, double& scale, cv::Size& minSize, const std::string& cascadeName);
 
 
 //Keys for the interface(What arguments to listen for)
@@ -24,7 +26,8 @@ const cv::String keys =
 	"{help h | | print this message}"
 	"{video v | | directory to video}"
 	"{display d | | display videostream}"
-	"{test t | | run tests to find best arguments for \"detectMultiscale\" function. Printed to args.txt}"
+	"{test t | | run tests to find best arguments for \"detectMultiscale\" function.}"
+	"{FPS f | | run FPS test on the application. The result is located in /fps.}"
 };
 
 bool DISPLAY = false;
@@ -60,6 +63,11 @@ int main(int argc, char** argv)
 			cv::String filename = parser.get<std::string>("video");
 			findArguments(filename);
 		}
+		if (parser.has("FPS")) {
+			std::cout << "run test for fps...\n";
+			cv::String filename = parser.get<std::string>("video");
+			testFPS(filename);
+		}
 		else {
 			cv::String filename = parser.get<std::string>("video");
 			captureVideo(filename);
@@ -71,6 +79,7 @@ int main(int argc, char** argv)
 
 	return 0;
 }
+
 //Function to iterate through a couple of settings to find the most accurate one.
 void findArguments(const std::string& filename) {
 	std::ofstream haarFront;
@@ -92,16 +101,16 @@ void findArguments(const std::string& filename) {
 			//MinSize(Start from 35,35 as no object smaller than that should be counted and up to 80,80 as the smallest object should not be larger than that.)
 			for (cv::Size minSize = cv::Size(25, 25); minSize.width < 50; minSize.width++ && minSize.height++) {
 				std::cout << "run test haarFront \n" << minNeighbour << "\t" << scale  << "\t" << minSize << "\n";
-				captureVideoTest(filename, haarFront, minNeighbour, scale, minSize, "../../data/haarcascades/haarcascade_frontalface_alt2.xml");
+				captureVideoFindArguments(filename, haarFront, minNeighbour, scale, minSize, "../../data/haarcascades/haarcascade_frontalface_alt2.xml");
 				
 				std::cout << "run test lbpFront\n" << minNeighbour << "\t" << scale << "\t" << minSize << "\n";
-				captureVideoTest(filename, lbpFront, minNeighbour, scale, minSize, "../../data/lbpcascades/lbpcascade_frontalface.xml");
+				captureVideoFindArguments(filename, lbpFront, minNeighbour, scale, minSize, "../../data/lbpcascades/lbpcascade_frontalface.xml");
 				
 				std::cout << "run test haarUpperbody\n" << minNeighbour << "\t" << scale << "\t" << minSize << "\n";
-				captureVideoTest(filename, haarUpperbody, minNeighbour, scale, minSize, "../../data/haarcascades/haarcascade_upperbody.xml");
+				captureVideoFindArguments(filename, haarUpperbody, minNeighbour, scale, minSize, "../../data/haarcascades/haarcascade_upperbody.xml");
 				
 				std::cout << "run test haarUpperbodyMcs\n" << minNeighbour << "\t" << scale << "\t" << minSize << "\n";
-				captureVideoTest(filename, haarUpperbodyMcs, minNeighbour, scale, minSize, "../../data/haarcascades/haarcascade_mcs_upperbody.xml");
+				captureVideoFindArguments(filename, haarUpperbodyMcs, minNeighbour, scale, minSize, "../../data/haarcascades/haarcascade_mcs_upperbody.xml");
 			}
 		}
 	}
@@ -111,6 +120,46 @@ void findArguments(const std::string& filename) {
 	haarUpperbody.close();
 	haarUpperbodyMcs.close();
 }
+
+//Test the FPS of all the models, with their optimal arguments.
+void testFPS(const std::string& filename) {
+	std::ofstream haarFront;
+	haarFront.open("fps/haar_front.txt", std::ofstream::app);
+
+	std::ofstream lbpFront;
+	lbpFront.open("fps/lbp_front.txt", std::ofstream::app);
+
+	std::ofstream haarUpperbody;
+	haarUpperbody.open("fps/haar_upperbody.txt", std::ofstream::app);
+
+	std::ofstream haarUpperbodyMcs;
+	haarUpperbodyMcs.open("fps/haar_upperbody_mcs.txt", std::ofstream::app);
+
+	//Initial values..
+	int minNeighbour = 1;
+	double scale = 1.1;
+	cv::Size minSize = cv::Size(33,33);
+
+	std::cout << "run fps-test haarFront \n";
+	captureVideoTestFPS(filename, haarFront, minNeighbour, scale, minSize, "../../data/haarcascades/haarcascade_frontalface_alt2.xml");
+	
+	std::cout << "run fps-test lbpFront \n";
+	captureVideoTestFPS(filename, lbpFront, minNeighbour = 3, scale = 1.1, minSize = cv::Size(28, 28), "../../data/lbpcascades/lbpcascade_frontalface.xml");
+
+	std::cout << "run fps-test haarUpperbody \n";
+	captureVideoTestFPS(filename, haarUpperbody, minNeighbour = 1, scale = 1.09, minSize = cv::Size(29, 29), "../../data/haarcascades/haarcascade_upperbody.xml");
+
+	std::cout << "run fps-test haarUpperbodyMcs \n";
+	captureVideoTestFPS(filename, haarUpperbodyMcs, minNeighbour = 1, scale = 1.08, minSize = cv::Size(47, 47), "../../data/haarcascades/haarcascade_mcs_upperbody.xml");
+
+
+	haarFront.close();
+	lbpFront.close();
+	haarUpperbody.close();
+	haarUpperbodyMcs.close();
+}
+
+
 
 //Display the faces of a frame
 void displayObjects(cv::UMat& frame, std::vector<cv::Rect>& bodies, const cv::Scalar& colour) {
@@ -251,9 +300,92 @@ void captureVideo(const std::string& filename) {
 	return;
 }
 
+//Capture video for testing the FPS.
+void captureVideoTestFPS(const std::string& filename, std::ofstream& outFile, int& minNeighbour, double& scale, cv::Size& minSize, const std::string& cascadeName) {
+	//Video capture
+	//cv::VideoCapture capture("../../../video/2.mp4");
+	cv::VideoCapture capture(filename);
+	cv::UMat frame;
 
-//Capture video for testing. 
-void captureVideoTest(const std::string& filename, std::ofstream& outFile, int& minNeighbour, double& scale, cv::Size& minSize, const std::string& cascadeName) {
+	cv::CascadeClassifier cascade;
+	cascade.load(cascadeName);
+
+	//Vector of bodies.
+	std::vector<cv::Rect> bodies;
+
+	if (capture.isOpened()) {
+		outFile << "New fpstest\n";
+
+		// Variables for the timer. Counter is the amount of iterations done where every number is new. occurences is the counted amount of people in the frame. 
+		int counter = 0;
+		int occurencies = 0;
+
+		//Both iteration and fps is needed as fps only will be changed once a second. This means that the value is quite static and can be compared. 
+		int fpsIteration = 0;
+		int fps = 0;
+
+		int totalIterations = 0; 
+
+		std::clock_t timer;
+		std::clock_t start;
+
+		int lastSecond = 0;
+		int time = 0;
+
+		timer = std::clock();
+		start = std::clock();
+		while (true) {
+			int time = (std::clock() - timer) / (int)CLOCKS_PER_SEC;
+			totalIterations++;
+			//On each second, write the current fps to prompt.
+			if (time > lastSecond) {
+				fps = fpsIteration;
+				outFile << fps << "\n";
+
+				fpsIteration = 0;
+				lastSecond = time;
+			}
+			//count the iterations. (Amount of frames)
+			fpsIteration++;
+
+			//Load captured frame into "frame"
+			capture.read(frame);
+
+			//Apply the wanted classifier to the frame
+			if (!frame.empty()) {
+
+				//Color modification(Make grayscale and equalize on histogram)
+				//cv::cvtColor(frame, frame, CV_BGR2GRAY);
+				//cv::equalizeHist(frame, frame);
+				//cv::resize(frame, frame, cv::Size(640, 360));
+				cascade.detectMultiScale(frame, bodies, scale, minNeighbour, 0, minSize, cv::Size(250, 250));
+
+				//secondCascade.detectMultiScale(frame, bodies2, 1.1, 2, 0 , cv::Size(30, 30));
+			}
+			else {
+				std::cout << " --(!) No more captured frame -- Break! \n";
+				break;
+			}
+			//Change the number of people in the image if it is consistant for two seconds of iterations.
+			if (bodies.size() != occurencies) {
+				counter++;
+				if (counter >= fps * 2) {
+					counter = 0;
+					occurencies = bodies.size();
+				}
+			}
+		}
+		outFile << "\n" << "Total Time:\n" << (std::clock() - start) / (int)CLOCKS_PER_SEC;
+		outFile << "\n" << "Total Frames:\n" << totalIterations;
+
+		std::cout << "Closing the capture" << std::endl;
+		capture.release();
+	}
+	return;
+}
+
+//Capture video for finding arguments. 
+void captureVideoFindArguments(const std::string& filename, std::ofstream& outFile, int& minNeighbour, double& scale, cv::Size& minSize, const std::string& cascadeName) {
 	//Video capture
 	//cv::VideoCapture capture("../../../video/2.mp4");
 	cv::VideoCapture capture(filename);
