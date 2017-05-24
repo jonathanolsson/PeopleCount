@@ -122,40 +122,41 @@ void findArguments(const std::string& filename) {
 }
 
 //Test the FPS of all the models, with their optimal arguments.
+//In the case of FPS = 1, the true FPS can differ. That is a limitation in the loop as the fps is measured based on number of frames on one second. However, the loop contains a calculation that takes more than a second and therefore the fps is calculated wrong.
 void testFPS(const std::string& filename) {
-	std::ofstream haarFront;
-	haarFront.open("fps/haar_front.txt", std::ofstream::app);
-
-	std::ofstream lbpFront;
-	lbpFront.open("fps/lbp_front.txt", std::ofstream::app);
-
-	std::ofstream haarUpperbody;
-	haarUpperbody.open("fps/haar_upperbody.txt", std::ofstream::app);
-
-	std::ofstream haarUpperbodyMcs;
-	haarUpperbodyMcs.open("fps/haar_upperbody_mcs.txt", std::ofstream::app);
-
 	//Initial values..
 	int minNeighbour = 1;
 	double scale = 1.1;
 	cv::Size minSize = cv::Size(33,33);
 
+	std::ofstream haarFront;
+	haarFront.open("fps/haar_front.txt");
+
 	std::cout << "run fps-test haarFront \n";
 	captureVideoTestFPS(filename, haarFront, minNeighbour, scale, minSize, "../../data/haarcascades/haarcascade_frontalface_alt2.xml");
+	haarFront.close();
+	
+
+	std::ofstream lbpFront;
+	lbpFront.open("fps/lbp_front.txt");
 	
 	std::cout << "run fps-test lbpFront \n";
 	captureVideoTestFPS(filename, lbpFront, minNeighbour = 3, scale = 1.1, minSize = cv::Size(28, 28), "../../data/lbpcascades/lbpcascade_frontalface.xml");
+	lbpFront.close();
+
+	std::ofstream haarUpperbody;
+	haarUpperbody.open("fps/haar_upperbody.txt");
 
 	std::cout << "run fps-test haarUpperbody \n";
 	captureVideoTestFPS(filename, haarUpperbody, minNeighbour = 1, scale = 1.09, minSize = cv::Size(29, 29), "../../data/haarcascades/haarcascade_upperbody.xml");
+	haarUpperbody.close();
+
+
+	std::ofstream haarUpperbodyMcs;
+	haarUpperbodyMcs.open("fps/haar_upperbody_mcs.txt");
 
 	std::cout << "run fps-test haarUpperbodyMcs \n";
 	captureVideoTestFPS(filename, haarUpperbodyMcs, minNeighbour = 1, scale = 1.08, minSize = cv::Size(47, 47), "../../data/haarcascades/haarcascade_mcs_upperbody.xml");
-
-
-	haarFront.close();
-	lbpFront.close();
-	haarUpperbody.close();
 	haarUpperbodyMcs.close();
 }
 
@@ -217,35 +218,40 @@ void captureVideo(const std::string& filename) {
 		//The total amount of iterations
 		int totalIteration = 0;
 		
-		//A counter to count how many frames the occurencies of people have been the same. Occurencies is the amount of people.
+		//A counter to count how many frames the occurrences of people have been the same. occurrences is the amount of people.
 		int counter = 0;
-		int occurencies = 0;
+		int occurrences = 0;
 
-		int iterations = 0;
+		int fpsIteration = 0;
 		int fps = 0;
 		
-		time_t second;
-		time(&second);
+
+		std::clock_t timer;
+
+		int lastSecond = 0;
+		int time = 0;
+
+		timer = std::clock();
 
 		while (true) {
-			if (time(time_t()) > second) {
-				fps = iterations;
+			int time = (std::clock() - timer) / (int)CLOCKS_PER_SEC;
+
+			//On each second, write the current fps to prompt.
+			if (time > lastSecond) {
+				fps = fpsIteration;
 				std::cout << fps << " fps" << std::endl;
-				
-				iterations = 0;
-				time(&second);
+
+				fpsIteration = 0;
+				lastSecond = time;
 			}
 
 			totalIteration++;
-			//count the iterations. (Amount of frames)
-			iterations++;
+			//count the fpsIteration. (Amount of frames)
+			fpsIteration++;
 
 			//Load captured frame into "frame"
 			capture.read(frame);
 			
-			if (totalIteration % 5 == 0) {
-				std::cout << totalIteration << "\t" << occurencies << "\n";
-			}
 			
 			//Apply the wanted classifier to the frame
 			if (!frame.empty()) {
@@ -265,7 +271,7 @@ void captureVideo(const std::string& filename) {
 				if (DISPLAY) {
 					//Put info on frame(Frames processed per second and the occupancy)
 					cv::putText(frame, "FPS: " + std::to_string(fps), cvPoint(30, 30), CV_FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 0), 2);
-					cv::putText(frame, "Persons: " + std::to_string(occurencies), cvPoint(30, 55), CV_FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 0), 2);
+					cv::putText(frame, "Persons: " + std::to_string(occurrences), cvPoint(30, 55), CV_FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 0), 2);
 					cv::putText(frame, "Frame: " + std::to_string(totalIteration), cvPoint(30, 80), CV_FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 0), 2);
 
 					//Display objects
@@ -279,13 +285,14 @@ void captureVideo(const std::string& filename) {
 			}
 
 			//Change the number of people in the image if it is consistant for some iterations.
-			if (bodies.size() != occurencies) {
+			if (bodies.size() != occurrences) {
 				counter++;
 				if (counter >= fps * 2) {
 					counter = 0;
-					occurencies = bodies.size();
+					occurrences = bodies.size();
 				}
 			}
+			std::cout << totalIteration << "\t" << occurrences << "\n";
 
 			int c = cv::waitKey(15);
 			if ((char)c == 'c') {
@@ -318,64 +325,44 @@ void captureVideoTestFPS(const std::string& filename, std::ofstream& outFile, in
 
 		// Variables for the timer. Counter is the amount of iterations done where every number is new. occurences is the counted amount of people in the frame. 
 		int counter = 0;
-		int occurencies = 0;
+		int occurrences = 0;
 
-		//Both iteration and fps is needed as fps only will be changed once a second. This means that the value is quite static and can be compared. 
-		int fpsIteration = 0;
-		int fps = 0;
-
+		double fps = 0;
 		int totalIterations = 0; 
 
-		std::clock_t timer;
 		std::clock_t start;
+		std::clock_t totalTime = std::clock();
 
-		int lastSecond = 0;
-		int time = 0;
-
-		timer = std::clock();
-		start = std::clock();
 		while (true) {
-			int time = (std::clock() - timer) / (int)CLOCKS_PER_SEC;
-			totalIterations++;
-			//On each second, write the current fps to prompt.
-			if (time > lastSecond) {
-				fps = fpsIteration;
-				outFile << fps << "\n";
+			start = std::clock();
 
-				fpsIteration = 0;
-				lastSecond = time;
-			}
-			//count the iterations. (Amount of frames)
-			fpsIteration++;
+			totalIterations++;
 
 			//Load captured frame into "frame"
 			capture.read(frame);
 
 			//Apply the wanted classifier to the frame
 			if (!frame.empty()) {
-
-				//Color modification(Make grayscale and equalize on histogram)
-				//cv::cvtColor(frame, frame, CV_BGR2GRAY);
-				//cv::equalizeHist(frame, frame);
-				//cv::resize(frame, frame, cv::Size(640, 360));
 				cascade.detectMultiScale(frame, bodies, scale, minNeighbour, 0, minSize, cv::Size(250, 250));
 
-				//secondCascade.detectMultiScale(frame, bodies2, 1.1, 2, 0 , cv::Size(30, 30));
 			}
 			else {
 				std::cout << " --(!) No more captured frame -- Break! \n";
 				break;
 			}
 			//Change the number of people in the image if it is consistant for two seconds of iterations.
-			if (bodies.size() != occurencies) {
+			if (bodies.size() != occurrences) {
 				counter++;
 				if (counter >= fps * 2) {
 					counter = 0;
-					occurencies = bodies.size();
+					occurrences = bodies.size();
 				}
 			}
+			fps = 1.0 / ((std::clock() - start) / (double)CLOCKS_PER_SEC);
+			outFile << fps << "\n";
+
 		}
-		outFile << "\n" << "Total Time:\n" << (std::clock() - start) / (int)CLOCKS_PER_SEC;
+		outFile << "\n" << "Total Time:\n" << (std::clock() - totalTime) / (int)CLOCKS_PER_SEC;
 		outFile << "\n" << "Total Frames:\n" << totalIterations;
 
 		std::cout << "Closing the capture" << std::endl;
@@ -405,7 +392,7 @@ void captureVideoFindArguments(const std::string& filename, std::ofstream& outFi
 
 		// Variables for the timer. Counter is the amount of iterations done where every number is new. occurences is the counted amount of people in the frame. 
 		int counter = 0;
-		int occurencies = 0;
+		int occurrences = 0;
 		
 		//Both iteration and fps is needed as fps only will be changed once a second. This means that the value is quite static and can be compared. 
 		int fpsIteration = 0;
@@ -432,7 +419,7 @@ void captureVideoFindArguments(const std::string& filename, std::ofstream& outFi
 
 			//On each fifth frame(or iteration), print amount of people to file.(this will give numbers that will be easy to compare, as it will allways be the same frame on the same iteration.)
 			if (totalIteration % 5 == 0) {
-				outFile << totalIteration << "\t" << occurencies << "\n";
+				outFile << totalIteration << "\t" << occurrences << "\n";
 			}
 
 			//count the iterations. (Amount of frames)
@@ -457,11 +444,11 @@ void captureVideoFindArguments(const std::string& filename, std::ofstream& outFi
 				break;
 			}
 			//Change the number of people in the image if it is consistant for two seconds of iterations.
-			if (bodies.size() != occurencies) {
+			if (bodies.size() != occurrences) {
 				counter++;
 				if (counter >= fps * 2) {
 					counter = 0;
-					occurencies = bodies.size();
+					occurrences = bodies.size();
 				}
 			}
 
