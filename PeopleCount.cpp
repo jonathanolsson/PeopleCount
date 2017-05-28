@@ -5,7 +5,7 @@
 
 #include <iostream>
 #include <fstream>
-
+#include <math.h>
 #include <ctime>
 #include <string>
 
@@ -24,10 +24,10 @@ void captureVideoFindArguments(const std::string& filename, std::ofstream& outFi
 const cv::String keys =
 {
 	"{help h | | print this message}"
-	"{video v | | directory to video}"
-	"{display d | | display videostream}"
-	"{test t | | run tests to find best arguments for \"detectMultiscale\" function.}"
-	"{FPS f | | run FPS test on the application. The result is located in /fps.}"
+	"{video v | | directory to video, used as -v=<video-file>}"
+	"{display d | | display the processed video-stream}"
+	"{findArgs a| | find best arguments for \"detectMultiscale\" function}"
+	"{FPS f | | run FPS test on the application. The result is saved in /fps}"
 };
 
 bool DISPLAY = false;
@@ -58,7 +58,7 @@ int main(int argc, char** argv)
 
 	//If the commandline has "v", run program on video.
 	if (parser.has("video")) {
-		if (parser.has("test")){
+		if (parser.has("findArgs")){
 			std::cout << "run test...\n";
 			cv::String filename = parser.get<std::string>("video");
 			findArguments(filename);
@@ -185,9 +185,10 @@ firstCascade.detectMultiScale(frame, bodies, 1.1, 3, 0, cv::Size(48, 48));
 */
 //Capture video from webcamera or video.
 void captureVideo(const std::string& filename) {
+	
 	//Video capture
-	cv::VideoCapture capture;
-
+	cv::VideoCapture capture(filename);
+	
 	if (filename.empty()) {
 		capture.open(0);
 	}
@@ -198,110 +199,77 @@ void captureVideo(const std::string& filename) {
 	cv::UMat frame;
 
 	cv::CascadeClassifier cascade;
-
-	//firstCascade.load("../../data/haarcascades/haarcascade_upperbody.xml");
-	//secondCascade.load("../../data/haarcascades/haarcascade_frontalface_alt2.xml");
-
-	//secondCascade.load("../../data/haarcascades/haarcascade_upperbody.xml");
-	//secondCascade.load("../../data/lbpcascades/lbpcascade_profileface.xml");
-
-	//cascade.load("../../data/haarcascades/haarcascade_frontalface_alt2.xml");
-	cascade.load("../../data/haarcascades/haarcascade_mcs_upperbody.xml");
-
-	//secondCascade.load("../../data/lbpcascades/lbpcascade_frontalface.xml");
+	cascade.load("../../data/haarcascades/haarcascade_frontalface_alt2.xml");
+	//cascade.load("../../data/haarcascades/haarcascade_mcs_upperbody.xml");
 
 	//Vector of bodies.
 	std::vector<cv::Rect> bodies;
 
-
 	if (capture.isOpened()) {
-		//The total amount of iterations
-		int totalIteration = 0;
-		
-		//A counter to count how many frames the occurrences of people have been the same. occurrences is the amount of people.
+		// Variables for the timer. Counter is the amount of iterations done where every number is new. occurences is the counted amount of people in the frame. 
 		int counter = 0;
 		int occurrences = 0;
 
-		int fpsIteration = 0;
-		int fps = 0;
-		
+		double fps = 0;
+		int totalIterations = 0;
 
-		std::clock_t timer;
-
-		int lastSecond = 0;
-		int time = 0;
-
-		timer = std::clock();
+		std::clock_t start;
+		std::clock_t totalTime = std::clock();
 
 		while (true) {
-			int time = (std::clock() - timer) / (int)CLOCKS_PER_SEC;
+			start = std::clock();
 
-			//On each second, write the current fps to prompt.
-			if (time > lastSecond) {
-				fps = fpsIteration;
-				std::cout << fps << " fps" << std::endl;
-
-				fpsIteration = 0;
-				lastSecond = time;
-			}
-
-			totalIteration++;
-			//count the fpsIteration. (Amount of frames)
-			fpsIteration++;
+			totalIterations++;
 
 			//Load captured frame into "frame"
 			capture.read(frame);
-			
-			
+
 			//Apply the wanted classifier to the frame
 			if (!frame.empty()) {
-				
-				//Color modification(Make grayscale and equalize on histogram)
-				//cv::cvtColor(frame, frame, CV_BGR2GRAY);
-				//cv::equalizeHist(frame, frame);
-
 				//Detect objects in frame
 				//Upperbody:
-				cascade.detectMultiScale(frame, bodies, 1.08, 1, 0, cv::Size(47, 47), cv::Size(250, 250));
+				//cascade.detectMultiScale(frame, bodies, 1.08, 1, 0, cv::Size(47, 47), cv::Size(250, 250));
 
 				//HaarFace:
-				//cascade.detectMultiScale(frame, bodies, 1.1, 1, 0, cv::Size(33, 33), cv::Size(200, 200));
-
-
+				cascade.detectMultiScale(frame, bodies, 1.1, 1, 0, cv::Size(33, 33), cv::Size(200, 200));
 				if (DISPLAY) {
 					//Put info on frame(Frames processed per second and the occupancy)
 					cv::putText(frame, "FPS: " + std::to_string(fps), cvPoint(30, 30), CV_FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 0), 2);
 					cv::putText(frame, "Persons: " + std::to_string(occurrences), cvPoint(30, 55), CV_FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 0), 2);
-					cv::putText(frame, "Frame: " + std::to_string(totalIteration), cvPoint(30, 80), CV_FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 0), 2);
-
+					cv::putText(frame, "Frame: " + std::to_string(totalIterations), cvPoint(30, 80), CV_FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 0), 2);
+					
 					//Display objects
 					displayObjects(frame, bodies, cv::Scalar(100, 200, 0));
 				}
 			}
 			else {
-				std::cout << " --(!) No more captured frame -- Break \n";
-
+				std::cout << " --(!) No more captured frame -- Break! \n";
 				break;
 			}
-
-			//Change the number of people in the image if it is consistant for some iterations.
+			//Change the number of people in the image if it is consistant for two seconds of iterations.
 			if (bodies.size() != occurrences) {
 				counter++;
 				if (counter >= fps * 2) {
 					counter = 0;
 					occurrences = bodies.size();
+					std::cout << "Occurences: " << occurrences << " People\n";
+					std::cout << "Time: " <<  (std::clock() - totalTime) / (int)CLOCKS_PER_SEC << " Seconds in\n";
+					std::cout << fps << " fps\n\n";
 				}
 			}
-			std::cout << totalIteration << "\t" << occurrences << "\n";
-
+			fps = 1.0 / ((std::clock() - start) / (double)CLOCKS_PER_SEC);
+			
 			int c = cv::waitKey(15);
 			if ((char)c == 'c') {
 				break;
 			}
 		}
+		std::cout << "\nTotal Time:\n" << (std::clock() - totalTime) / (int)CLOCKS_PER_SEC;
+		std::cout << "\nTotal Frames:\n" << totalIterations;
 
-		std::cout << "Closing the camera" << std::endl;
+		std::cout << "Closing the capture" << std::endl;
 		capture.release();
+
 		cv::destroyAllWindows();
 	}
 	return;
